@@ -28,4 +28,6 @@ public interface IGameService {
 	public PlayerDetails buyProperty(PlayerDetails playerDetails, Long property_id);
 	
 	public PlayerDetails pasarTurno(PlayerDetails playerDetails);
+	
+	public PlayerDetails setLastResponse(PlayerDetails playerDetails);
 }

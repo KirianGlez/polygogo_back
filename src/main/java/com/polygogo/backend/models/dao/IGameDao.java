@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import com.polygogo.backend.models.entity.Game;
 import com.polygogo.backend.models.entity.User;
 import com.polygogo.backend.models.entity.PlayerDetails;
+import com.polygogo.backend.models.entity.Properties;
 
 public interface IGameDao extends CrudRepository<Game, Long>{
 	

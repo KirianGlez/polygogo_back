@@ -1,6 +1,7 @@
 package com.polygogo.backend.models.entity;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +35,8 @@ public class PlayerDetails implements Serializable {
 	
 	@Nullable
 	private ArrayList<int[]> properties;
+	
+	private LocalDateTime last_response;
 	
 	public PlayerDetails() {}
 
@@ -94,8 +97,9 @@ public class PlayerDetails implements Serializable {
 		return coins;
 	}
 
-	public void setCoins(int coins) {
-		this.coins = coins;
+	public void setCoins(double d) {
+		
+		this.coins = (int)d;
 	}
 
 	public ArrayList<int[]> getProperties() {
@@ -112,6 +116,14 @@ public class PlayerDetails implements Serializable {
 
 	public void setTurn(boolean turn) {
 		this.turn = turn;
+	}
+
+	public LocalDateTime getLast_response() {
+		return last_response;
+	}
+
+	public void setLast_response(LocalDateTime last_response) {
+		this.last_response = last_response;
 	}
 	
 }

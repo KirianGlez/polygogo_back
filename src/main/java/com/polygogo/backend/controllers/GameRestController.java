@@ -100,4 +100,11 @@ public class GameRestController {
 		return gameService.pasarTurno(playerDetails);
 	}
 	
+	@CrossOrigin(origins = "http://localhost:4200")
+	@PutMapping("/lastresponse")
+	@ResponseStatus(HttpStatus.OK)
+	public PlayerDetails lastResponse(@RequestBody PlayerDetails playerDetails) {
+		return gameService.setLastResponse(playerDetails);
+	}
+	
 }

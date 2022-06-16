@@ -1,9 +1,11 @@
 package com.polygogo.backend.models.service.implementation;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +42,39 @@ public class GameServiceImpl implements IGameService{
 	@Override
 	@Transactional
 	public Game findById(Long id) {
-		return gameDao.findById(id).orElse(null);
+		Game game = gameDao.findById(id).orElse(null);
+		int hayTurno = -1;
+		if(game.isEnabled()) {
+			List<PlayerDetails> playerDetailsList = playerDetailsDao.findPlayerDetailsFromGame(game.getId());
+			for (PlayerDetails temp : playerDetailsList) {
+				if(temp.isTurn()) {
+					hayTurno = temp.getPlayer_number();
+				}
+	            if(temp.getLast_response().isBefore(LocalDateTime.now().minusMinutes(1))) {
+	            	pasarTurno(temp);
+	            }
+	        }
+			if(hayTurno == -1) {
+				if(game.getTurn() != 4) {
+					for (int i = 0; i < playerDetailsList.size(); i++) {
+			            if(playerDetailsList.get(i).getPlayer_number() == game.getTurn() +1) {
+			            	playerDetailsList.get(i).setTurn(true);
+			            	playerDetailsDao.save(playerDetailsList.get(i));
+			            }
+			        }
+	            	game.setTurn(game.getTurn()+1);
+				}else {
+					for (int i = 0; i < playerDetailsList.size(); i++) {
+			            if(playerDetailsList.get(i).getPlayer_number() == 1) {
+			            	playerDetailsList.get(i).setTurn(true);
+			            	playerDetailsDao.save(playerDetailsList.get(i));
+			            }
+			        }
+					game.setTurn(1);
+				}
+			}
+		}
+		return game;
 	}
 
 	@Override
@@ -55,12 +89,12 @@ public class GameServiceImpl implements IGameService{
 		Long game_id = gameDao.getGameIdwhereAreLessThan4Players();
 
 		if(game_id==null) {
-			System.out.println("no hay juego");
 			game = new Game();
 			Set<PlayerDetails> listPlayerDetails = new HashSet<PlayerDetails>();
 			PlayerDetails playerDetails = new PlayerDetails();
 			
 			game.setEnabled(true);
+			game.setTurn(1);
 			game = gameDao.save(game);
 			
 			playerDetails.setPlayer_number(1);
@@ -70,6 +104,7 @@ public class GameServiceImpl implements IGameService{
 			playerDetails.setPosition(0);
 			playerDetails.setTurn(true);
 			playerDetails.setProperties(new ArrayList<int[]>());
+			playerDetails.setLast_response(LocalDateTime.now());
 			
 			playerDetails = playerDetailsDao.save(playerDetails);
 			
@@ -93,6 +128,7 @@ public class GameServiceImpl implements IGameService{
 			playerDetails.setPosition(0);
 			playerDetails.setTurn(false);
 			playerDetails.setProperties(new ArrayList<int[]>());
+			playerDetails.setLast_response(LocalDateTime.now());
 			
 			playerDetails = playerDetailsDao.save(playerDetails);
 			
@@ -117,7 +153,7 @@ public class GameServiceImpl implements IGameService{
 	}
 
 	@Override
-	public List<PlayerDetails>getPlayerDetails(Long game_id) {
+	public List<PlayerDetails> getPlayerDetails(Long game_id) {
 		
 		return playerDetailsDao.findPlayerDetailsFromGame(game_id);
 	}
@@ -127,7 +163,6 @@ public class GameServiceImpl implements IGameService{
 		
 		int random = -1;
 		if(playerDetails.isTurn()) {
-			System.out.println("hola");
 			return null;
 		}
 		random = (int)(Math.random()*6+1);
@@ -138,8 +173,40 @@ public class GameServiceImpl implements IGameService{
 		}
 		playerDetailsDao.save(playerDetails);
 		
-		return propertiesDao.findById((long) playerDetails.getPosition()).orElse(null);
+		Properties property = propertiesDao.findById((long) playerDetails.getPosition()).orElse(null);
+		
+		if(checkIfPropertyIsBought(property, playerDetails.getGame_id(), playerDetails)) 
+			return null;
+		else
+			return property;
+		
 	}
+	
+	public boolean checkIfPropertyIsBought(Properties property, Long game_id, PlayerDetails player) {
+		
+		List<PlayerDetails> jugadores =getPlayerDetails(game_id);
+		
+		for(PlayerDetails ps: jugadores){
+			for(int[] p: ps.getProperties()) {
+				for(int n:p) {
+					if(property.getId() == n) {
+						payRent(property, player, ps);
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+	
+	public void payRent(Properties property, PlayerDetails payer, PlayerDetails receiver) {
+		
+		payer.setCoins(payer.getCoins()-property.getPrice()*0.25);
+		receiver.setCoins(receiver.getCoins()+property.getPrice()*0.25);
+		
+		playerDetailsDao.save(payer);
+		playerDetailsDao.save(receiver);
+		}
 
 	@Override
 	public List<Properties> getProperties() {
@@ -153,7 +220,7 @@ public class GameServiceImpl implements IGameService{
 		playerDetails = playerDetailsDao.findById(playerDetails.getId()).orElse(null);
 		ArrayList<int[]> details=playerDetails.getProperties();
 		
-		int[] a = {Math.toIntExact(property_id), 0};
+		int[] a = {Math.toIntExact(property_id)};
 		
 		details.add(a);
 		
@@ -180,6 +247,9 @@ public class GameServiceImpl implements IGameService{
 			ordenado[3].setTurn(false);
 			
 			ordenado[0].setTurn(true);
+			Game game = gameDao.findById(ordenado[0].getGame_id()).orElse(null);
+			game.setTurn(ordenado[0].getPlayer_number());
+			gameDao.save(game);
 			
 			playerDetailsDao.save(ordenado[3]);
 			playerDetailsDao.save(ordenado[0]);
@@ -187,12 +257,25 @@ public class GameServiceImpl implements IGameService{
 		}else {
 			ordenado[playerDetails.getPlayer_number()-1].setTurn(false);
 			ordenado[playerDetails.getPlayer_number()].setTurn(true);
+			Game game = gameDao.findById(ordenado[playerDetails.getPlayer_number()].getGame_id()).orElse(null);
+			game.setTurn(ordenado[playerDetails.getPlayer_number()].getPlayer_number());
+			gameDao.save(game);
 			
 			playerDetailsDao.save(ordenado[playerDetails.getPlayer_number()-1]);
 			playerDetailsDao.save(ordenado[playerDetails.getPlayer_number()]);
 		}
 		
 		return ordenado[playerDetails.getPlayer_number()-1];
+	}
+	
+	@Override
+	public PlayerDetails setLastResponse(PlayerDetails playerDetails) {
+		
+		playerDetails.setLast_response(LocalDateTime.now());
+		playerDetailsDao.save(playerDetails);
+		
+		return playerDetails;
+		
 	}
 
 }

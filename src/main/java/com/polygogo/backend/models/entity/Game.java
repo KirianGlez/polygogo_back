@@ -14,6 +14,8 @@ import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
+import org.springframework.lang.Nullable;
+
 @Entity
 @Table(name="games")
 public class Game implements Serializable{
@@ -23,6 +25,9 @@ public class Game implements Serializable{
 	private long id;
 	
 	private boolean enabled;
+	
+	@Nullable
+	private int turn;
 	
 	@OneToMany(mappedBy="game_id")
 	private Set<PlayerDetails> players_details;
@@ -59,6 +64,14 @@ public class Game implements Serializable{
 
 	public void setPlayers_details(Set<PlayerDetails> players_details) {
 		this.players_details = players_details;
+	}
+
+	public int getTurn() {
+		return turn;
+	}
+
+	public void setTurn(int turn) {
+		this.turn = turn;
 	}
 	
 }
